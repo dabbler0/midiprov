@@ -6,7 +6,7 @@
   THRESHOLD = 1;
 
   MIDI.loadPlugin({
-    soundfontUrl: '/bower_components/midi/soundfont/',
+    soundfontUrl: 'bower_components/midi/soundfont/',
     instruments: ['acoustic_grand_piano', 'synth_drum', 'alto_sax'],
     callback: function() {
       MIDI.programChange(0, 0);
