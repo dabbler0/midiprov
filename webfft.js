@@ -172,7 +172,7 @@
   addCircles = function() {
     var _i, _results;
     _results = [];
-    for (_i = 1; _i <= 30; _i++) {
+    for (_i = 1; _i <= 100; _i++) {
       _results.push(objects.push(new CircleVis()));
     }
     return _results;

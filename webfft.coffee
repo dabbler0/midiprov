@@ -84,7 +84,7 @@ chordToPentatonic = (chord) ->
 
 objects = []
 addCircles = ->
-  for [1..30]
+  for [1..100]
     objects.push new CircleVis()
 
 setInterval (->
