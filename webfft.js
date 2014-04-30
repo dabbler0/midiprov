@@ -1,5 +1,5 @@
 (function() {
-  var NOTES_PER_MEASURE, TEMPO, THRESHOLD, WINDOW_SIZE, addNotes, chordToFrequencies, chordToPentatonic, lastNote, lastTheme, pitchToFrequency, time;
+  var CircleVis, NOTES_PER_MEASURE, TEMPO, THRESHOLD, WINDOW_SIZE, addCircles, addNotes, canvas, chordToFrequencies, chordToPentatonic, ctx, gold, lastNote, lastTheme, objects, pitchToFrequency, time, weightedAvg, white;
 
   WINDOW_SIZE = 2048;
 
@@ -15,6 +15,49 @@
       return addNotes();
     }
   });
+
+  canvas = document.getElementById('main');
+
+  ctx = canvas.getContext('2d');
+
+  white = [256, 256, 256];
+
+  gold = [218, 165, 32];
+
+  weightedAvg = function(a, b, p) {
+    var el_, i, _i, _len, _results;
+    _results = [];
+    for (i = _i = 0, _len = a.length; _i < _len; i = ++_i) {
+      el_ = a[i];
+      _results.push(Math.round(a[i] * (1 - p) + b[i] * p));
+    }
+    return _results;
+  };
+
+  CircleVis = (function() {
+    function CircleVis() {
+      this.location = {
+        x: Math.random() * (canvas.width - 80) + 40,
+        y: Math.random() * (canvas.height - 80) + 40
+      };
+      this.radius = Math.random() * 20 + 20;
+    }
+
+    CircleVis.prototype.tick = function() {
+      return this.radius -= 0.2;
+    };
+
+    CircleVis.prototype.render = function(ctx) {
+      ctx.globalAlpha = this.radius / 40;
+      ctx.fillStyle = "rgb(" + (weightedAvg(white, gold, (40 - this.radius) / 35).join(',')) + ")";
+      ctx.beginPath();
+      ctx.arc(this.location.x, this.location.y, this.radius, 0, 2 * Math.PI);
+      return ctx.fill();
+    };
+
+    return CircleVis;
+
+  })();
 
   pitchToFrequency = function(pitch) {
     var a, m, n, semitone;
@@ -124,6 +167,32 @@
     })();
   };
 
+  objects = [];
+
+  addCircles = function() {
+    var _i, _results;
+    _results = [];
+    for (_i = 1; _i <= 30; _i++) {
+      _results.push(objects.push(new CircleVis()));
+    }
+    return _results;
+  };
+
+  setInterval((function() {
+    var newObjects, object, _i, _len;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    newObjects = [];
+    for (_i = 0, _len = objects.length; _i < _len; _i++) {
+      object = objects[_i];
+      object.tick();
+      object.render(ctx);
+      if (object.radius > 5) {
+        newObjects.push(object);
+      }
+    }
+    return objects = newObjects;
+  }), 25);
+
   TEMPO = 1;
 
   time = 0;
@@ -148,6 +217,9 @@
     _ref = 'Dm7 Gd7 Dm7 Gd7 Em7 Ad7 Em7 Ad7 Am7 Dd7 _Am7 _Dd7 C7 C7 Dm7 Gd7 Dm7 Gd7 Em7 Ad7 Em7 Ad7 Am7 Dd7 _Am7 _Dd7 C7 C7 Gm7 Gm7 Cd7 Cd7 F7 F7 Am7 Am7 Dd7 Dd7 Gd7 Gd7 Dm7 Gd7 Dm7 Gd7 Em7 Ad7 Em7 Ad7 Am7 Dd7 _Am7 _Dd7 C7 C7'.split(' ');
     for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
       chord = _ref[i];
+      setTimeout((function() {
+        return addCircles();
+      }), time * 1000);
       c = chordToFrequencies(chord);
       for (_j = 0, _len1 = c.length; _j < _len1; _j++) {
         note = c[_j];
@@ -185,23 +257,29 @@
         }
       } else {
         lastTheme.length = 0;
-        for (j = _l = 0; 0 <= NOTES_PER_MEASURE ? _l < NOTES_PER_MEASURE : _l > NOTES_PER_MEASURE; j = 0 <= NOTES_PER_MEASURE ? ++_l : --_l) {
-          themeNoteProbability = Math.random() > 0.5 ? 1 : 0.3;
-          if (Math.random() < themeNoteProbability) {
-            note = p[k = Math.floor(Math.random() * p.length)];
-            lastTheme.push(k);
-            if (lastNote != null) {
-              MIDI.noteOff(2, lastNote, time);
+        if (Math.random() > 0.5) {
+          themeNoteProbability = 1;
+        } else {
+          themeNoteProbability = 0.3;
+        }
+        if (NOTES_PER_MEASURE !== 1) {
+          for (j = _l = 0; 0 <= NOTES_PER_MEASURE ? _l < NOTES_PER_MEASURE : _l > NOTES_PER_MEASURE; j = 0 <= NOTES_PER_MEASURE ? ++_l : --_l) {
+            if (Math.random() < themeNoteProbability) {
+              note = p[k = Math.floor(Math.random() * p.length)];
+              lastTheme.push(k);
+              if (lastNote != null) {
+                MIDI.noteOff(2, lastNote, time);
+              }
+              MIDI.noteOn(2, note, 127, time);
+              lastNote = note;
+            } else {
+              lastTheme.push(-1);
             }
-            MIDI.noteOn(2, note, 127, time);
-            lastNote = note;
-          } else {
-            lastTheme.push(-1);
-          }
-          if (j % 2 === 0) {
-            time += 1 / 3 * TEMPO * 4 / NOTES_PER_MEASURE;
-          } else {
-            time += 1 / 6 * TEMPO * 4 / NOTES_PER_MEASURE;
+            if (j % 2 === 0) {
+              time += 1 / 3 * TEMPO * 4 / NOTES_PER_MEASURE;
+            } else {
+              time += 1 / 6 * TEMPO * 4 / NOTES_PER_MEASURE;
+            }
           }
         }
       }

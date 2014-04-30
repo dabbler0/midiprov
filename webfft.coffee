@@ -9,6 +9,34 @@ MIDI.loadPlugin
     MIDI.programChange 2, 65
     addNotes()
 
+canvas = document.getElementById 'main'
+ctx = canvas.getContext '2d'
+
+white = [256, 256, 256]
+gold = [218, 165, 32]
+
+weightedAvg = (a, b, p) -> Math.round(a[i] * (1 - p) + b[i] * p) for el_, i in a
+
+class CircleVis
+  constructor: ->
+    @location = {
+      x: Math.random() * (canvas.width - 80) + 40
+      y: Math.random() * (canvas.height - 80) + 40
+    }
+    @radius = Math.random() * 20 + 20
+
+  tick: ->
+    @radius -= 0.2
+
+  render: (ctx) ->
+    ctx.globalAlpha = @radius / 40
+    ctx.fillStyle = "rgb(#{weightedAvg(white, gold, (40 - @radius) / 35).join(',')})"
+    ctx.beginPath()
+
+    ctx.arc @location.x, @location.y, @radius, 0, 2 * Math.PI
+
+    ctx.fill()
+
 pitchToFrequency = (pitch) ->
   m = /^(\^\^|\^|__|_|=|)([A-Ga-g])(,+|'+|)$/.exec(pitch)
   n = {C:-9,D:-7,E:-5,F:-4,G:-2,A:0,B:2,c:3,d:5,e:7,f:8,g:10,a:12,b:14}
@@ -54,6 +82,23 @@ chordToPentatonic = (chord) ->
   c = s[if chord[1] is 'm' then 'm' else '']; x = n[chord[0]]
   return (((x + m + k + 9) - 9) + 69 for k in c)
 
+objects = []
+addCircles = ->
+  for [1..30]
+    objects.push new CircleVis()
+
+setInterval (->
+  ctx.clearRect 0, 0, canvas.width, canvas.height
+  newObjects = []
+  for object in objects
+    object.tick()
+    object.render(ctx)
+    if object.radius > 5
+      newObjects.push object
+
+  objects = newObjects
+), 25
+
 TEMPO = 1
 time = 0
 NOTES_PER_MEASURE = 4
@@ -64,7 +109,8 @@ addNotes = ->
   console.log 'adding more notes'
   # Satin doll:
   for chord, i in 'Dm7 Gd7 Dm7 Gd7 Em7 Ad7 Em7 Ad7 Am7 Dd7 _Am7 _Dd7 C7 C7 Dm7 Gd7 Dm7 Gd7 Em7 Ad7 Em7 Ad7 Am7 Dd7 _Am7 _Dd7 C7 C7 Gm7 Gm7 Cd7 Cd7 F7 F7 Am7 Am7 Dd7 Dd7 Gd7 Gd7 Dm7 Gd7 Dm7 Gd7 Em7 Ad7 Em7 Ad7 Am7 Dd7 _Am7 _Dd7 C7 C7'.split ' '
-  #for chord, i in 'Am7 Dm7 Gd7 C7 Cd7 F7 B07 Ed7 Am7 Ad7 Dm7 Gd7 C7 Em7 Ad7 Dm7 Gd7 C7 B07 E7'.split ' '
+    setTimeout (->
+      addCircles()), time * 1000
     c = chordToFrequencies chord
 
     for note in c
@@ -100,8 +146,13 @@ addNotes = ->
 
     else
       lastTheme.length = 0
-      for j in [0...NOTES_PER_MEASURE]
-        themeNoteProbability = if Math.random() > 0.5 then 1 else 0.3
+
+      if Math.random() > 0.5
+        themeNoteProbability = 1
+      else
+        themeNoteProbability = 0.3
+
+      unless NOTES_PER_MEASURE is 1 then for j in [0...NOTES_PER_MEASURE]
         if Math.random() < themeNoteProbability
           note = p[k = Math.floor Math.random() * p.length]
           
